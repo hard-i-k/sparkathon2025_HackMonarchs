@@ -1,0 +1,579 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>M5 Expiry Price Predictor</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .content {
+            padding: 40px;
+        }
+
+        .tabs {
+            display: flex;
+            margin-bottom: 30px;
+            border-bottom: 2px solid #f0f0f0;
+        }
+
+        .tab {
+            padding: 15px 30px;
+            cursor: pointer;
+            border-bottom: 3px solid transparent;
+            transition: all 0.3s ease;
+            font-weight: 500;
+        }
+
+        .tab.active {
+            border-bottom-color: #667eea;
+            color: #667eea;
+        }
+
+        .tab:hover {
+            background: #f8f9fa;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .form-group input, .form-group select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s ease;
+        }
+
+        .form-group input:focus, .form-group select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 12px 30px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: transform 0.3s ease;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+        }
+
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .result {
+            margin-top: 30px;
+            padding: 20px;
+            border-radius: 10px;
+            background: #f8f9fa;
+            border-left: 4px solid #667eea;
+        }
+
+        .result.success {
+            background: #d4edda;
+            border-left-color: #28a745;
+        }
+
+        .result.error {
+            background: #f8d7da;
+            border-left-color: #dc3545;
+        }
+
+        .result h3 {
+            margin-bottom: 15px;
+            color: #333;
+        }
+
+        .price-display {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #667eea;
+            text-align: center;
+            margin: 20px 0;
+        }
+
+        .analysis-chart {
+            margin-top: 20px;
+            padding: 20px;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: #666;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .batch-item {
+            background: #f8f9fa;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+        }
+
+        .batch-item h4 {
+            margin-bottom: 10px;
+            color: #333;
+        }
+
+        .batch-item p {
+            margin: 5px 0;
+            color: #666;
+        }
+
+        .add-item-btn {
+            background: #28a745;
+            color: white;
+            padding: 8px 16px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+
+        .remove-item-btn {
+            background: #dc3545;
+            color: white;
+            padding: 5px 10px;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+            float: right;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🍽️ M5 Expiry Price Predictor</h1>
+            <p>Predict food item prices based on expiry dates using AI</p>
+        </div>
+
+        <div class="content">
+            <div class="tabs">
+                <div class="tab active" onclick="showTab('single')">Single Prediction</div>
+                <div class="tab" onclick="showTab('batch')">Batch Prediction</div>
+                <div class="tab" onclick="showTab('analysis')">Price Analysis</div>
+            </div>
+
+            <!-- Single Prediction Tab -->
+            <div id="single" class="tab-content active">
+                <h2>Single Item Prediction</h2>
+                <form id="singleForm">
+                    <div class="form-group">
+                        <label for="singleDays">Days to Expiry:</label>
+                        <input type="number" id="singleDays" min="1" max="365" value="7" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="singleDept">Department:</label>
+                        <select id="singleDept" required>
+                            <option value="FOODS_1">FOODS_1</option>
+                            <option value="FOODS_2">FOODS_2</option>
+                            <option value="FOODS_3">FOODS_3</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="singleDate">Date:</label>
+                        <input type="date" id="singleDate" required>
+                    </div>
+                    <button type="submit" class="btn">Predict Price</button>
+                </form>
+                <div id="singleResult"></div>
+            </div>
+
+            <!-- Batch Prediction Tab -->
+            <div id="batch" class="tab-content">
+                <h2>Batch Prediction</h2>
+                <form id="batchForm">
+                    <div id="batchItems">
+                        <div class="batch-item">
+                            <button type="button" class="remove-item-btn" onclick="removeBatchItem(this)">×</button>
+                            <h4>Item 1</h4>
+                            <div class="form-group">
+                                <label>Days to Expiry:</label>
+                                <input type="number" class="batch-days" min="1" max="365" value="7" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Department:</label>
+                                <select class="batch-dept" required>
+                                    <option value="FOODS_1">FOODS_1</option>
+                                    <option value="FOODS_2">FOODS_2</option>
+                                    <option value="FOODS_3">FOODS_3</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Date:</label>
+                                <input type="date" class="batch-date" required>
+                            </div>
+                        </div>
+                    </div>
+                    <button type="button" class="add-item-btn" onclick="addBatchItem()">+ Add Item</button>
+                    <button type="submit" class="btn">Predict All Prices</button>
+                </form>
+                <div id="batchResult"></div>
+            </div>
+
+            <!-- Analysis Tab -->
+            <div id="analysis" class="tab-content">
+                <h2>Price Analysis</h2>
+                <form id="analysisForm">
+                    <div class="form-group">
+                        <label for="analysisDept">Department:</label>
+                        <select id="analysisDept" required>
+                            <option value="FOODS_1">FOODS_1</option>
+                            <option value="FOODS_2">FOODS_2</option>
+                            <option value="FOODS_3">FOODS_3</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="analysisDate">Date:</label>
+                        <input type="date" id="analysisDate" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="maxDays">Maximum Days to Analyze:</label>
+                        <input type="number" id="maxDays" min="1" max="100" value="30" required>
+                    </div>
+                    <button type="submit" class="btn">Analyze Prices</button>
+                </form>
+                <div id="analysisResult"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Set default date to today
+        document.addEventListener('DOMContentLoaded', function() {
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('singleDate').value = today;
+            document.getElementById('analysisDate').value = today;
+            document.querySelectorAll('.batch-date').forEach(input => {
+                input.value = today;
+            });
+        });
+
+        function showTab(tabName) {
+            // Hide all tab contents
+            document.querySelectorAll('.tab-content').forEach(content => {
+                content.classList.remove('active');
+            });
+            
+            // Remove active class from all tabs
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            
+            // Show selected tab content
+            document.getElementById(tabName).classList.add('active');
+            
+            // Add active class to clicked tab
+            event.target.classList.add('active');
+        }
+
+        function addBatchItem() {
+            const container = document.getElementById('batchItems');
+            const itemCount = container.children.length + 1;
+            const today = new Date().toISOString().split('T')[0];
+            
+            const newItem = document.createElement('div');
+            newItem.className = 'batch-item';
+            newItem.innerHTML = `
+                <button type="button" class="remove-item-btn" onclick="removeBatchItem(this)">×</button>
+                <h4>Item ${itemCount}</h4>
+                <div class="form-group">
+                    <label>Days to Expiry:</label>
+                    <input type="number" class="batch-days" min="1" max="365" value="7" required>
+                </div>
+                <div class="form-group">
+                    <label>Department:</label>
+                    <select class="batch-dept" required>
+                        <option value="FOODS_1">FOODS_1</option>
+                        <option value="FOODS_2">FOODS_2</option>
+                        <option value="FOODS_3">FOODS_3</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Date:</label>
+                    <input type="date" class="batch-date" value="${today}" required>
+                </div>
+            `;
+            
+            container.appendChild(newItem);
+        }
+
+        function removeBatchItem(button) {
+            const container = document.getElementById('batchItems');
+            if (container.children.length > 1) {
+                button.parentElement.remove();
+                // Renumber items
+                container.querySelectorAll('.batch-item').forEach((item, index) => {
+                    item.querySelector('h4').textContent = `Item ${index + 1}`;
+                });
+            }
+        }
+
+        function showLoading(elementId) {
+            document.getElementById(elementId).innerHTML = `
+                <div class="loading">
+                    <div class="spinner"></div>
+                    <p>Processing...</p>
+                </div>
+            `;
+        }
+
+        function showResult(elementId, result, isError = false) {
+            const element = document.getElementById(elementId);
+            element.className = `result ${isError ? 'error' : 'success'}`;
+            element.innerHTML = result;
+        }
+
+        // Single Prediction
+        document.getElementById('singleForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const days = document.getElementById('singleDays').value;
+            const dept = document.getElementById('singleDept').value;
+            const date = document.getElementById('singleDate').value;
+            
+            showLoading('singleResult');
+            
+            try {
+                const response = await fetch('/predict/single', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        days_to_expiry: parseInt(days),
+                        dept_id: dept,
+                        date: date
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.status === 'success') {
+                    const price = data.data.predicted_price;
+                    showResult('singleResult', `
+                        <h3>✅ Prediction Successful</h3>
+                        <div class="price-display">$${price ? price.toFixed(2) : 'N/A'}</div>
+                        <p><strong>Days to Expiry:</strong> ${days}</p>
+                        <p><strong>Department:</strong> ${dept}</p>
+                        <p><strong>Date:</strong> ${date}</p>
+                    `);
+                } else {
+                    showResult('singleResult', `
+                        <h3>❌ Prediction Failed</h3>
+                        <p>${data.message}</p>
+                    `, true);
+                }
+            } catch (error) {
+                showResult('singleResult', `
+                    <h3>❌ Error</h3>
+                    <p>Failed to connect to the API. Please check if the server is running.</p>
+                `, true);
+            }
+        });
+
+        // Batch Prediction
+        document.getElementById('batchForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const items = [];
+            document.querySelectorAll('.batch-item').forEach(item => {
+                const days = item.querySelector('.batch-days').value;
+                const dept = item.querySelector('.batch-dept').value;
+                const date = item.querySelector('.batch-date').value;
+                
+                items.push({
+                    days_to_expiry: parseInt(days),
+                    dept_id: dept,
+                    date: date
+                });
+            });
+            
+            showLoading('batchResult');
+            
+            try {
+                const response = await fetch('/predict/batch', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ items: items })
+                });
+                
+                const data = await response.json();
+                
+                if (data.status === 'success') {
+                    let resultHtml = '<h3>✅ Batch Prediction Results</h3>';
+                    data.data.predictions.forEach((pred, index) => {
+                        resultHtml += `
+                            <div class="batch-item">
+                                <h4>Item ${index + 1}</h4>
+                                <p><strong>Days to Expiry:</strong> ${pred.days_to_expiry}</p>
+                                <p><strong>Department:</strong> ${pred.dept_id}</p>
+                                <p><strong>Date:</strong> ${pred.date}</p>
+                                <p><strong>Predicted Price:</strong> $${pred.predicted_price ? pred.predicted_price.toFixed(2) : 'N/A'}</p>
+                            </div>
+                        `;
+                    });
+                    showResult('batchResult', resultHtml);
+                } else {
+                    showResult('batchResult', `
+                        <h3>❌ Batch Prediction Failed</h3>
+                        <p>${data.message}</p>
+                    `, true);
+                }
+            } catch (error) {
+                showResult('batchResult', `
+                    <h3>❌ Error</h3>
+                    <p>Failed to connect to the API. Please check if the server is running.</p>
+                `, true);
+            }
+        });
+
+        // Analysis
+        document.getElementById('analysisForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const dept = document.getElementById('analysisDept').value;
+            const date = document.getElementById('analysisDate').value;
+            const maxDays = document.getElementById('maxDays').value;
+            
+            showLoading('analysisResult');
+            
+            try {
+                const response = await fetch('/predict/analysis', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        dept_id: dept,
+                        date: date,
+                        max_days: parseInt(maxDays)
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.status === 'success') {
+                    let resultHtml = `
+                        <h3>📊 Price Analysis for ${dept}</h3>
+                        <p><strong>Date:</strong> ${date}</p>
+                        <p><strong>Analysis Range:</strong> 1 to ${maxDays} days</p>
+                        <div class="analysis-chart">
+                            <h4>Price Trend by Days to Expiry:</h4>
+                            <div style="height: 300px; overflow-y: auto;">
+                    `;
+                    
+                    data.data.analysis.forEach(item => {
+                        const price = item.predicted_price ? item.predicted_price.toFixed(2) : 'N/A';
+                        resultHtml += `
+                            <div style="display: flex; justify-content: space-between; padding: 5px 0; border-bottom: 1px solid #eee;">
+                                <span><strong>${item.days_to_expiry} days:</strong></span>
+                                <span>$${price}</span>
+                            </div>
+                        `;
+                    });
+                    
+                    resultHtml += '</div></div>';
+                    showResult('analysisResult', resultHtml);
+                } else {
+                    showResult('analysisResult', `
+                        <h3>❌ Analysis Failed</h3>
+                        <p>${data.message}</p>
+                    `, true);
+                }
+            } catch (error) {
+                showResult('analysisResult', `
+                    <h3>❌ Error</h3>
+                    <p>Failed to connect to the API. Please check if the server is running.</p>
+                `, true);
+            }
+        });
+    </script>
+</body>
+</html> 

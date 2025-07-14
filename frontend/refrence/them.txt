@@ -1,0 +1,12 @@
+Use This Color Theme:
+bg-true-blue: #0053E2
+
+bg-spark-yellow: #FFC220
+
+bg-white: #FFFFFF
+
+text-bentonville-blue: #001E60
+
+bg-sky-blue: #A9DDF7
+
+bg-everyday-blue: #4DBDF5

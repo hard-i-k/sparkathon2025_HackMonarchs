@@ -1,0 +1,20 @@
+[
+  {
+    "name": "NutriBite Biscuit",
+    "price": 85,
+    "expiry_date": "2025-07-15",
+    "carbon_footprint": 0.7,
+    "category": "biscuits",
+    "tags": ["healthy"],
+    "aisle": "4"
+  },
+  {
+    "name": "EcoFarm Milk",
+    "price": 55,
+    "expiry_date": "2025-07-10",
+    "carbon_footprint": 0.3,
+    "category": "milk",
+    "tags": ["organic", "eco-friendly"],
+    "aisle": "2"
+  }
+]
